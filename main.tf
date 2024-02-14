@@ -1,8 +1,9 @@
 resource "google_compute_network" "vpc_network" {
-  project                 = var.project_id
-  name                    = "custom-vpc-network"
-  auto_create_subnetworks = false
-  routing_mode            = "REGIONAL"
+  project                         = var.project_id
+  name                            = "custom-vpc-network"
+  auto_create_subnetworks         = false
+  delete_default_routes_on_create = true
+  routing_mode                    = "REGIONAL"
 }
 
 resource "google_compute_subnetwork" "webapp_subnet" {
