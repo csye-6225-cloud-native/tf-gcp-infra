@@ -7,14 +7,14 @@ resource "google_compute_network" "vpc_network" {
 }
 
 resource "google_compute_subnetwork" "webapp_subnet" {
-  name          = "${var.environment}-webapp-subnet"
+  name          = var.webapp_subnet_name
   region        = var.region
   network       = google_compute_network.vpc_network.id
-  ip_cidr_range = var.webapp_cidr_block
+  ip_cidr_range = var.webapp_subnet_cidr_block
 }
 
 resource "google_compute_subnetwork" "db_subnet" {
-  name          = "${var.environment}-db-subnet"
+  name          = var.db_subnet_name
   region        = var.region
   network       = google_compute_network.vpc_network.id
   ip_cidr_range = var.db_subnet_cidr_block

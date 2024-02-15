@@ -28,7 +28,9 @@ To configure infrastructure for different environments (eg dev, stage, prod):
     environment              = "dev"
     project_id               = "gcp project id"
     region                   = "gcp region"
+    webapp_subnet_name       = "subnet"
     webapp_subnet_cidr_block = "xxx.xxx.xxx.x/xx"
+    db_subnet_name           = "db"
     db_subnet_cidr_block     = "xxx.xxx.xxx.x/xx"
 ``` 
 
@@ -67,7 +69,7 @@ To configure infrastructure for different environments (eg dev, stage, prod):
    **Destroy the infrastructure**:
 
    ```sh
-   terraform destroy
+   terraform destroy -var-file="env.tfvars"
    ```
 
 ## Author
