@@ -25,4 +25,3 @@ resource "google_compute_route" "custom_route" {
   network          = google_compute_network.vpc_network.id
   dest_range       = "0.0.0.0/0"
   next_hop_gateway = "default-internet-gateway"
-}
