@@ -17,7 +17,7 @@ resource "google_compute_subnetwork" "db_subnet" {
   name          = var.db_subnet_name
   region        = var.region
   network       = google_compute_network.vpc_network.id
-  ip_cidr_range = var.db_subnet_cidr_block
+  ip_cidr_range = var.db_subnet_cidr_b
 }
 
 resource "google_compute_route" "custom_route" {
