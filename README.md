@@ -25,13 +25,31 @@ To configure infrastructure for different environments (eg dev, stage, prod):
 - Create a env.tfvars file (eg, dev.tfvars, prod.tfvars, etc)
 - Sample env.tfvars file:
 ```hcl
-    environment              = "dev"
-    project_id               = "gcp project id"
-    region                   = "gcp region"
-    webapp_subnet_name       = "subnet"
-    webapp_subnet_cidr_block = "xxx.xxx.xxx.x/xx"
-    db_subnet_name           = "db"
-    db_subnet_cidr_block     = "xxx.xxx.xxx.x/xx"
+    environment                  = "dev"
+    project_id                   = "gcp project id"
+    region                       = "gcp region"
+    webapp_subnet_name           = "webapp subnet"
+    webapp_subnet_cidr_block     = "xxx.xxx.x.x/xx"
+    db_subnet_name               = "db subnet"
+    db_subnet_cidr_block         = "xxx.xxx.x.x/xx"
+    vpc_routing_mode             = "REGIONAL"
+    internet_gateway_cidr        = "x.x.x.x/x"
+    allow_http_ports             = ["8080"]
+    allow_http_source_ranges     = ["x.x.x.x/x"]
+    allow_http_target_tags       = ["webapp", "allow-http"]
+    allow_http_disabled          = false
+    deny_ssh_ports               = ["22"]
+    deny_ssh_source_ranges       = ["x.x.x.x/x"]
+    deny_ssh_target_tags         = ["webapp", "deny-ssh"]
+    deny_ssh_disabled            = false
+    webapp_instance_name         = "webapp-vm"
+    webapp_instance_machine_type = "gce machine type"
+    webapp_instance_zone         = "gcp zone"
+    webapp_instance_tags         = ["webapp", "allow-http", "allow-ssh"]
+    webapp_instance_disk_size    = 100
+    webapp_instance_disk_type    = "pd-balanced"
+    webapp_instance_image_name   = "xxxxxxx" # could either be image name or image family name
+    webapp_instance_network_tier = "PREMIUM"
 ``` 
 
 ## Usage
