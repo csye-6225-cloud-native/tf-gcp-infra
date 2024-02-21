@@ -83,26 +83,6 @@ variable "deny_ssh_disabled" {
   description = "Disable deny ssh firewall rule"
 }
 
-variable "allow_egress_ports" {
-  type        = list(string)
-  description = "List of allowed ports for outgoing traffic"
-}
-
-variable "allow_egress_dest_ranges" {
-  type        = list(string)
-  description = "List of destination ip ranges for outgoing traffic"
-}
-
-variable "allow_egress_target_tags" {
-  type        = list(string)
-  description = "List of network tags of target instance"
-}
-
-variable "allow_egress_disabled" {
-  type        = bool
-  description = "Disable allow egress firewall rule"
-}
-
 variable "webapp_instance_name" {
   type        = string
   description = "Name for the webapp instance"
@@ -142,4 +122,3 @@ variable "webapp_instance_network_tier" {
   type        = string
   description = "Network tier of the webapp instance"
 }
-
