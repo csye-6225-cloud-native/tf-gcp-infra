@@ -10,14 +10,14 @@ resource "google_compute_subnetwork" "webapp_subnet" {
   name          = var.webapp_subnet_name
   region        = var.region
   network       = google_compute_network.vpc_network.id
-  ip_cidr_range = var.webapp_subnet_cidr_block
+  ip_cidr_range = var.webapp_subnet_cidr
 }
 
 resource "google_compute_subnetwork" "db_subnet" {
   name          = var.db_subnet_name
   region        = var.region
   network       = google_compute_network.vpc_network.id
-  ip_cidr_range = var.db_subnet_cidr_block
+  ip_cidr_range = var.db_subnet_cidr
 }
 
 resource "google_compute_route" "internet_route" {
@@ -57,7 +57,7 @@ resource "google_compute_firewall" "deny_ssh_rule" {
   target_tags   = var.deny_ssh_target_tags
 }
 
-resource "google_compute_instance" "webapp_vm" {
+resource "google_compute_instance" "webapp_instance" {
   name         = "${var.environment}-${var.webapp_instance_name}"
   machine_type = var.webapp_instance_machine_type
   zone         = var.webapp_instance_zone
@@ -78,4 +78,72 @@ resource "google_compute_instance" "webapp_vm" {
       network_tier = var.webapp_instance_network_tier
     }
   }
+
+  metadata = {
+    startup-script = templatefile("scripts/webapp-startup-script.sh.tpl", {
+      db_hostname = google_sql_database_instance.db_instance.private_ip_address
+      db_name     = google_sql_database.webapp_db.name
+      db_username = google_sql_user.db_user.name
+      db_password = google_sql_user.db_user.password
+    })
+  }
+}
+
+resource "google_compute_global_address" "private_ip_address" {
+  name          = "${var.environment}-private-ip-address"
+  purpose       = var.private_ip_address_purpose
+  address_type  = var.private_ip_address_type
+  prefix_length = 16
+  network       = google_compute_network.vpc_network.id
+}
+
+resource "google_service_networking_connection" "private_vpc_connection" {
+  network                 = google_compute_network.vpc_network.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
+}
+
+resource "random_id" "db_name_suffix" {
+  byte_length = 4
+}
+
+resource "google_sql_database_instance" "db_instance" {
+  name                = "${var.environment}-db-instance-${random_id.db_name_suffix.hex}"
+  region              = var.region
+  database_version    = var.db_instance_database_version
+  deletion_protection = var.db_instance_deletion_protection
+
+  depends_on = [google_service_networking_connection.private_vpc_connection]
+
+  settings {
+    tier              = var.db_instance_tier
+    disk_size         = var.db_instance_disk_size
+    disk_type         = var.db_instance_disk_type
+    availability_type = var.db_instance_availability_type
+
+    ip_configuration {
+      ipv4_enabled    = false
+      private_network = google_compute_network.vpc_network.id
+    }
+  }
+}
+
+resource "google_sql_database" "webapp_db" {
+  name     = var.db_name
+  instance = google_sql_database_instance.db_instance.id
+}
+
+resource "random_password" "password" {
+  length           = 16
+  min_lower        = 2
+  min_upper        = 2
+  min_numeric      = 2
+  min_special      = 2
+  override_special = "!@#&*-_+<>:?"
+}
+
+resource "google_sql_user" "db_user" {
+  name     = var.db_username
+  instance = google_sql_database_instance.db_instance.id
+  password = random_password.password.result
 }

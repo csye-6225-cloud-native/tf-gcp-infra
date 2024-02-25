@@ -33,12 +33,12 @@ variable "db_subnet_name" {
   description = "Database subnet name"
 }
 
-variable "webapp_subnet_cidr_block" {
+variable "webapp_subnet_cidr" {
   type        = string
   description = "Webapp subnet CIDR block"
 }
 
-variable "db_subnet_cidr_block" {
+variable "db_subnet_cidr" {
   type        = string
   description = "Database subnet CIDR block"
 }
@@ -121,4 +121,54 @@ variable "webapp_instance_disk_size" {
 variable "webapp_instance_network_tier" {
   type        = string
   description = "Network tier of the webapp instance"
+}
+
+variable "db_instance_database_version" {
+  type        = string
+  description = "Database version of the cloud sql instance"
+}
+
+variable "db_instance_deletion_protection" {
+  type        = string
+  description = "Whether or not to allow Terraform to destroy the cloud sql instance"
+}
+
+variable "db_instance_tier" {
+  type        = string
+  description = "Machine type of the cloud sql instance"
+}
+
+variable "db_instance_disk_size" {
+  type        = string
+  description = "Disk size to attach to the cloud sql instance"
+}
+
+variable "db_instance_disk_type" {
+  type        = string
+  description = "Disk type to attach to the cloud sql instance"
+}
+
+variable "db_instance_availability_type" {
+  type        = string
+  description = "The availability type of the cloud sql instance"
+}
+
+variable "db_name" {
+  type        = string
+  description = "Name of the database to create in cloud sql instance"
+}
+
+variable "db_username" {
+  type        = string
+  description = "Username for the database user in cloud sql instance"
+}
+
+variable "private_ip_address_purpose" {
+  type        = string
+  description = "Purpose of the private IP address for the vpc network connection"
+}
+
+variable "private_ip_address_type" {
+  type        = string
+  description = "Address type of the private IP address for the vpc network connection"
 }
