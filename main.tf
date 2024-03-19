@@ -86,10 +86,12 @@ resource "google_compute_instance" "webapp_instance" {
 
   metadata = {
     startup-script = templatefile("scripts/webapp-startup-script.sh.tpl", {
-      db_hostname = google_sql_database_instance.db_instance.private_ip_address
-      db_name     = google_sql_database.webapp_db.name
-      db_username = google_sql_user.db_user.name
-      db_password = google_sql_user.db_user.password
+      db_hostname      = google_sql_database_instance.db_instance.private_ip_address
+      db_name          = google_sql_database.webapp_db.name
+      db_username      = google_sql_user.db_user.name
+      db_password      = google_sql_user.db_user.password
+      webapp_log_level = var.webapp_log_level
+      webapp_log_path  = var.webapp_log_path
     })
   }
 }
