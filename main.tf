@@ -79,6 +79,11 @@ resource "google_compute_instance" "webapp_instance" {
     }
   }
 
+  service_account {
+    email  = google_service_account.webapp_vm_service_acc.email
+    scopes = var.webapp_vm_service_acc_scopes
+  }
+
   metadata = {
     startup-script = templatefile("scripts/webapp-startup-script.sh.tpl", {
       db_hostname = google_sql_database_instance.db_instance.private_ip_address
@@ -87,6 +92,34 @@ resource "google_compute_instance" "webapp_instance" {
       db_password = google_sql_user.db_user.password
     })
   }
+}
+
+resource "google_service_account" "webapp_vm_service_acc" {
+  account_id   = var.webapp_vm_service_account_id
+  display_name = var.webapp_vm_service_account_display_name
+}
+
+resource "google_project_iam_binding" "webapp_vm_sa_iam_binding" {
+  for_each = toset(var.webapp_vm_service_account_roles)
+
+  project = var.project_id
+  role    = each.value
+
+  members = [
+    "serviceAccount:${google_service_account.webapp_vm_service_acc.email}",
+  ]
+}
+
+data "google_dns_managed_zone" "webapp_dns_zone" {
+  name = var.webapp_dns_zone_name
+}
+
+resource "google_dns_record_set" "webapp_a_record" {
+  name         = data.google_dns_managed_zone.webapp_dns_zone.dns_name
+  type         = "A"
+  ttl          = var.webapp_dns_record_set_ttl
+  managed_zone = data.google_dns_managed_zone.webapp_dns_zone.name
+  rrdatas      = [google_compute_instance.webapp_instance.network_interface[0].access_config[0].nat_ip]
 }
 
 resource "google_compute_global_address" "private_ip_address" {
