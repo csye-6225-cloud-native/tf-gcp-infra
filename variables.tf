@@ -172,3 +172,43 @@ variable "private_ip_address_type" {
   type        = string
   description = "Address type of the private IP address for the vpc network connection"
 }
+
+variable "webapp_dns_zone_name" {
+  type        = string
+  description = "Zone name of the webapp cloud dns"
+}
+
+variable "webapp_dns_record_set_ttl" {
+  type        = number
+  description = "time-to-live of the webapp dns record set"
+}
+
+variable "webapp_vm_service_account_id" {
+  type        = string
+  description = "Account ID for the service account to be created for the webapp instance"
+}
+
+variable "webapp_vm_service_account_display_name" {
+  type        = string
+  description = "Display name for the service account to be created for the webapp instance"
+}
+
+variable "webapp_vm_service_account_roles" {
+  type        = list(string)
+  description = "List of IAM roles to attach to the service account for the webapp instance"
+}
+
+variable "webapp_vm_service_acc_scopes" {
+  type        = list(string)
+  description = "List of scopes for the service account attached to the webapp instance"
+}
+
+variable "webapp_log_level" {
+  type        = string
+  description = "Minimum log level for the webapp logs"
+}
+
+variable "webapp_log_path" {
+  type        = string
+  description = "Default log path for the webapp logs"
+}
