@@ -57,6 +57,11 @@ resource "google_compute_firewall" "deny_ssh_rule" {
   target_tags   = var.deny_ssh_target_tags
 }
 
+data "google_compute_image" "webapp_image" {
+  family  = var.webapp_instance_image_name
+  project = var.project_id
+}
+
 resource "google_compute_instance" "webapp_instance" {
   name         = "${var.environment}-${var.webapp_instance_name}"
   machine_type = var.webapp_instance_machine_type
@@ -65,7 +70,7 @@ resource "google_compute_instance" "webapp_instance" {
 
   boot_disk {
     initialize_params {
-      image = var.webapp_instance_image_name
+      image = data.google_compute_image.webapp_image.self_link
       size  = var.webapp_instance_disk_size
       type  = var.webapp_instance_disk_type
     }
