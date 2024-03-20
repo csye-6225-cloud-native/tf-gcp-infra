@@ -94,6 +94,11 @@ resource "google_compute_instance" "webapp_instance" {
       webapp_log_path  = var.webapp_log_path
     })
   }
+
+  depends_on = [
+    google_service_account.webapp_vm_service_acc,
+    google_project_iam_binding.webapp_vm_sa_iam_binding
+  ]
 }
 
 resource "google_service_account" "webapp_vm_service_acc" {
@@ -110,6 +115,8 @@ resource "google_project_iam_binding" "webapp_vm_sa_iam_binding" {
   members = [
     "serviceAccount:${google_service_account.webapp_vm_service_acc.email}",
   ]
+
+  depends_on = [google_service_account.webapp_vm_service_acc]
 }
 
 data "google_dns_managed_zone" "webapp_dns_zone" {
