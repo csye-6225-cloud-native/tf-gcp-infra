@@ -17,6 +17,14 @@ Ensure the following prerequistes are installed and configured:
 Ensure the following APIs are enabled in the GCP project:
 
 - Google Compute Engine API (`compute.googleapis.com`)
+- Cloud Logging API (`logging.googleapis.com`)
+- Serverless VPC Access API (`vpcaccess.googleapis.com`)
+- Cloud Build API (`cloudbuild.googleapis.com`)
+- Cloud Functions API (`cloudfunctions.googleapis.com`)
+- Cloud Pub/Sub API (`pubsub.googleapis.com`)
+- Cloud Pub/Sub API (`pubsub.googleapis.com`)
+- Cloud Run Admin API (`run.googleapis.com`)
+- Eventarc API (`eventarc.googleapis.com`)
 
  ## Configuration with tfvars
 

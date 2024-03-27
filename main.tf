@@ -286,6 +286,11 @@ resource "google_cloudfunctions2_function" "verify_email_gcf" {
     pubsub_topic = google_pubsub_topic.verify_email_topic.id
     retry_policy = var.verify_email_gcf_event_retry_policy
   }
+
+  depends_on = [
+    google_service_account.gcf_service_account,
+    google_project_iam_member.gcf_service_account_iam_members
+  ]
 }
 
 resource "google_service_account" "gcf_service_account" {
@@ -294,10 +299,11 @@ resource "google_service_account" "gcf_service_account" {
 }
 
 resource "google_project_iam_member" "gcf_service_account_iam_members" {
-  for_each   = toset(var.gcf_service_account_member_roles)
-  project    = var.project_id
-  role       = each.value
-  member     = "serviceAccount:${google_service_account.gcf_service_account.email}"
+  for_each = toset(var.gcf_service_account_member_roles)
+  project  = var.project_id
+  role     = each.value
+  member   = "serviceAccount:${google_service_account.gcf_service_account.email}"
+
   depends_on = [google_service_account.gcf_service_account]
 }
 
@@ -307,6 +313,8 @@ resource "google_cloudfunctions2_function_iam_member" "gcf_service_account_cloud
   cloud_function = google_cloudfunctions2_function.verify_email_gcf.name
   role           = var.gcf_service_account_cloudfunctions_member_role
   member         = "serviceAccount:${google_service_account.gcf_service_account.email}"
+
+  depends_on = [google_service_account.gcf_service_account]
 }
 
 resource "google_project_iam_binding" "pubsub_service_account_token_creator" {
