@@ -198,7 +198,7 @@ variable "webapp_vm_service_account_roles" {
   description = "List of IAM roles to attach to the service account for the webapp instance"
 }
 
-variable "webapp_vm_service_acc_scopes" {
+variable "webapp_vm_service_account_scopes" {
   type        = list(string)
   description = "List of scopes for the service account attached to the webapp instance"
 }
@@ -211,4 +211,134 @@ variable "webapp_log_level" {
 variable "webapp_log_path" {
   type        = string
   description = "Default log path for the webapp logs"
+}
+
+variable "webapp_domain" {
+  type        = string
+  description = "Domain name of the webapp"
+}
+
+variable "webapp_port" {
+  type        = number
+  description = "Port of the webapp"
+}
+
+variable "mailgun_api_key" {
+  type        = string
+  description = "API Key for the mailgun client for the gcf service config"
+}
+
+variable "verify_email_pubsub_topic_name" {
+  type        = string
+  description = "Name of the email verification pubsub topic"
+}
+
+variable "verify_email_pubsub_topic_retention_duration" {
+  type        = string
+  description = "Message retention duration in seconds for the verify email pubsub topic"
+}
+
+variable "pubsub_service_account_token_creator_role" {
+  type        = string
+  description = "Service account token creator role to attach to the google's managed pubsub service account"
+}
+
+variable "verify_email_pubsub_sub_name" {
+  type        = string
+  description = "Name of the email verification pubsub subscription"
+}
+
+variable "verify_email_pubsub_sub_retention_duration" {
+  type        = string
+  description = "Message retention duration in seconds for the verify email pubsub subscription"
+}
+
+variable "verify_email_pubsub_sub_ack_deadline" {
+  type        = number
+  description = "Acknowledge deadline in seconds for the verify email pubsub subscription"
+}
+
+variable "verify_email_pubsub_sub_min_backoff" {
+  type        = string
+  description = "Minimun backoff delay in seconds for the verify email pubsub subscription"
+}
+
+variable "verify_email_pubsub_sub_max_backoff" {
+  type        = string
+  description = "Maximum backoff delay in seconds for the verify email pubsub subscription"
+}
+
+variable "gcf_vpc_connector_cidr_range" {
+  type        = string
+  description = "Serverless vpc access connector's CIDR block"
+}
+
+variable "gcf_service_account_display_name" {
+  type        = string
+  description = "Display name for the service account to be created for the cloud function"
+}
+
+variable "gcf_service_account_member_roles" {
+  type        = list(string)
+  description = "List of IAM roles for the service account member to be created for the cloud function"
+}
+
+variable "gcf_service_account_cloudfunctions_member_role" {
+  type        = string
+  description = "Cloudfunction2 IAM role for the service account member to be created for the cloud function"
+}
+
+variable "verify_email_gcf_name" {
+  type        = string
+  description = "Name of the verify email cloud function"
+}
+
+variable "verify_email_gcf_build_runtime" {
+  type        = string
+  description = "Build runtime of the verify email cloud function"
+}
+
+variable "verify_email_gcf_build_entry_point" {
+  type        = string
+  description = "Entry point of the verify email cloud function"
+}
+
+variable "verify_email_gcf_service_min_instance" {
+  type        = number
+  description = "Minimun instance count of the verify email cloud function"
+}
+
+variable "verify_email_gcf_service_max_instance" {
+  type        = number
+  description = "Maximum instance count of the verify email cloud function"
+}
+
+variable "verify_email_gcf_service_available_memory" {
+  type        = string
+  description = "Memory to allocate to the instance of the verify email cloud function"
+}
+
+variable "verify_email_gcf_service_timeout_seconds" {
+  type        = number
+  description = "Service timeout in seconds of the verify email cloud function"
+}
+
+variable "verify_email_gcf_service_ingress_settings" {
+  type        = string
+  description = "Service ingress setting of the verify email cloud function"
+}
+
+variable "verify_email_gcf_event_type" {
+  type        = string
+  description = "Event trigger type of the verify email cloud function"
+}
+
+variable "verify_email_gcf_event_retry_policy" {
+  type        = string
+  description = "Event trigger retry policy of the verify email cloud function"
+}
+
+variable "verify_email_gcf_source_storage_object_name" {
+  type        = string
+  description = "Storage object name of the verify email cloud function source"
 }
