@@ -202,8 +202,7 @@ resource "google_compute_region_autoscaler" "webapp_mig_autoscaler" {
 }
 
 resource "google_compute_backend_service" "webapp_lb_backend_service" {
-  name = "${var.environment}-${var.webapp_lb_name}-backend-service"
-  # region                = var.region
+  name                  = "${var.environment}-${var.webapp_lb_name}-backend-service"
   load_balancing_scheme = var.webapp_lb_backend_service_load_balancing_scheme
   locality_lb_policy    = var.webapp_lb_backend_service_locality_lb_policy
   health_checks         = [google_compute_health_check.webapp_http_health_check.id]
@@ -221,8 +220,7 @@ resource "google_compute_backend_service" "webapp_lb_backend_service" {
 }
 
 resource "google_compute_url_map" "webapp_lb_url_map" {
-  name = "${var.environment}-${var.webapp_lb_name}-url-map"
-  # region          = var.region
+  name            = "${var.environment}-${var.webapp_lb_name}-url-map"
   default_service = google_compute_backend_service.webapp_lb_backend_service.id
 }
 
@@ -234,21 +232,17 @@ resource "google_compute_managed_ssl_certificate" "webapp_ssl_cert" {
 }
 
 resource "google_compute_target_https_proxy" "webapp_lb_https_proxy" {
-  name = "${var.environment}-${var.webapp_lb_name}-proxy"
-  # region           = var.region
+  name             = "${var.environment}-${var.webapp_lb_name}-proxy"
   url_map          = google_compute_url_map.webapp_lb_url_map.id
   ssl_certificates = [google_compute_managed_ssl_certificate.webapp_ssl_cert.id]
 }
 
 resource "google_compute_global_forwarding_rule" "webapp_lb_forwarding_rule" {
-  name = "${var.environment}-${var.webapp_lb_name}-forwarding-rule"
-  # region = var.region
-
+  name                  = "${var.environment}-${var.webapp_lb_name}-forwarding-rule"
   load_balancing_scheme = var.webapp_lb_forwarding_rule_load_balancing_scheme
   ip_protocol           = var.webapp_lb_forwarding_rule_ip_protocol
   port_range            = var.webapp_lb_forwarding_rule_port_range
   target                = google_compute_target_https_proxy.webapp_lb_https_proxy.id
-  # network_tier          = "STANDARD"
 }
 
 data "google_dns_managed_zone" "webapp_dns_zone" {
