@@ -24,6 +24,13 @@ resource "google_compute_subnetwork" "db_subnet" {
   ip_cidr_range = var.db_subnet_cidr
 }
 
+# resource "google_compute_subnetwork" "webapp_lb_subnet" {
+#   name          = var.webapp_lb_subnet_name
+#   region        = var.region
+#   network       = google_compute_network.vpc_network.id
+#   ip_cidr_range = var.webapp_lb_subnet_cidr
+# }
+
 resource "google_compute_route" "internet_route" {
   name             = "${var.environment}-internet-route"
   network          = google_compute_network.vpc_network.id
@@ -31,26 +38,36 @@ resource "google_compute_route" "internet_route" {
   next_hop_gateway = "default-internet-gateway"
 }
 
-resource "google_compute_firewall" "allow_http_rule" {
-  project  = var.project_id
-  name     = "${google_compute_network.vpc_network.name}-allow-http"
-  network  = google_compute_network.vpc_network.id
-  disabled = var.allow_http_disabled
+resource "google_compute_firewall" "allow_health_check_rule" {
+  name    = "${google_compute_network.vpc_network.name}-allow-health-check"
+  network = google_compute_network.vpc_network.id
 
   allow {
     protocol = "tcp"
-    ports    = var.allow_http_ports
+    ports    = var.allow_health_check_ports
   }
 
-  source_ranges = var.allow_http_source_ranges
-  target_tags   = var.allow_http_target_tags
+  source_ranges = var.allow_health_check_source_ranges
+  target_tags   = var.allow_health_check_target_tags
+}
+
+resource "google_compute_firewall" "deny_internet_access_rule" {
+  name     = "${google_compute_network.vpc_network.name}-deny-internet-access"
+  network  = google_compute_network.vpc_network.id
+  priority = 2000
+
+  allow {
+    protocol = "tcp"
+    ports    = var.deny_internet_ports
+  }
+
+  source_ranges = var.deny_internet_source_ranges
+  target_tags   = var.deny_internet_target_tags
 }
 
 resource "google_compute_firewall" "deny_ssh_rule" {
-  project  = var.project_id
-  name     = "${google_compute_network.vpc_network.name}-deny-ssh"
-  network  = google_compute_network.vpc_network.id
-  disabled = var.deny_ssh_disabled
+  name    = "${google_compute_network.vpc_network.name}-deny-ssh"
+  network = google_compute_network.vpc_network.id
 
   deny {
     protocol = "tcp"
@@ -66,18 +83,19 @@ data "google_compute_image" "webapp_image" {
   project = var.project_id
 }
 
-resource "google_compute_instance" "webapp_instance" {
-  name         = "${var.environment}-${var.webapp_instance_name}"
-  machine_type = var.webapp_instance_machine_type
-  zone         = var.webapp_instance_zone
-  tags         = var.webapp_instance_tags
+resource "google_compute_region_instance_template" "webapp_instance" {
+  name                 = "${var.environment}-${var.webapp_instance_name}-template"
+  description          = var.webapp_instance_template_description
+  instance_description = var.webapp_instance_description
+  machine_type         = var.webapp_instance_machine_type
+  region               = var.region
+  tags                 = var.webapp_instance_tags
 
-  boot_disk {
-    initialize_params {
-      image = data.google_compute_image.webapp_image.self_link
-      size  = var.webapp_instance_disk_size
-      type  = var.webapp_instance_disk_type
-    }
+  disk {
+    boot         = true
+    source_image = data.google_compute_image.webapp_image.self_link
+    disk_size_gb = var.webapp_instance_disk_size
+    disk_type    = var.webapp_instance_disk_type
   }
 
   network_interface {
@@ -130,6 +148,109 @@ resource "google_project_iam_binding" "webapp_vm_iam_bindings" {
   depends_on = [google_service_account.webapp_vm_service_account]
 }
 
+resource "google_compute_health_check" "webapp_http_health_check" {
+  name        = "${var.environment}-${var.webapp_http_health_check_name}"
+  description = var.webapp_http_health_check_description
+
+  check_interval_sec  = var.webapp_http_health_check_interval_sec
+  timeout_sec         = var.webapp_http_health_check_timeout_sec
+  healthy_threshold   = var.webapp_http_health_check_healthy_threshold
+  unhealthy_threshold = var.webapp_http_health_check_unhealthy_threshold
+
+  http_health_check {
+    port         = var.webapp_http_health_check_port
+    request_path = var.webapp_http_health_check_request_path
+  }
+}
+
+resource "google_compute_region_instance_group_manager" "webapp_mig" {
+  name                             = "${var.environment}-${var.webapp_instance_name}-mig"
+  base_instance_name               = "${var.environment}-${var.webapp_instance_name}"
+  region                           = var.region
+  distribution_policy_zones        = var.webapp_mig_distribution_policy_zones
+  distribution_policy_target_shape = var.webapp_mig_distribution_policy_target_shape
+
+  version {
+    instance_template = google_compute_region_instance_template.webapp_instance.self_link
+  }
+
+  named_port {
+    name = var.webapp_mig_named_port_name
+    port = var.webapp_port
+  }
+
+  auto_healing_policies {
+    health_check      = google_compute_health_check.webapp_http_health_check.id
+    initial_delay_sec = var.webapp_mig_autohealing_initial_delay_sec
+  }
+}
+
+resource "google_compute_region_autoscaler" "webapp_mig_autoscaler" {
+  name   = "${var.environment}-${var.webapp_mig_autoscaler_name}"
+  region = var.region
+  target = google_compute_region_instance_group_manager.webapp_mig.id
+
+  autoscaling_policy {
+    min_replicas    = var.webapp_mig_autoscaler_min_replicas
+    max_replicas    = var.webapp_mig_autoscaler_max_replicas
+    cooldown_period = var.webapp_mig_autoscaler_cooldown_period
+
+    cpu_utilization {
+      target = var.webapp_mig_autoscaler_cpu_utilization_target
+    }
+  }
+}
+
+resource "google_compute_backend_service" "webapp_lb_backend_service" {
+  name = "${var.environment}-${var.webapp_lb_name}-backend-service"
+  # region                = var.region
+  load_balancing_scheme = var.webapp_lb_backend_service_load_balancing_scheme
+  locality_lb_policy    = var.webapp_lb_backend_service_locality_lb_policy
+  health_checks         = [google_compute_health_check.webapp_http_health_check.id]
+  protocol              = var.webapp_lb_backend_service_protocol
+  port_name             = var.webapp_lb_backend_service_port_name
+  session_affinity      = var.webapp_lb_backend_service_session_affinity
+  timeout_sec           = var.webapp_lb_backend_service_timeout_sec
+
+  backend {
+    group           = google_compute_region_instance_group_manager.webapp_mig.instance_group
+    balancing_mode  = var.webapp_lb_backend_service_balancing_mode
+    max_utilization = var.webapp_lb_backend_service_max_utilization
+    capacity_scaler = var.webapp_lb_backend_service_capacity_scaler
+  }
+}
+
+resource "google_compute_url_map" "webapp_lb_url_map" {
+  name = "${var.environment}-${var.webapp_lb_name}-url-map"
+  # region          = var.region
+  default_service = google_compute_backend_service.webapp_lb_backend_service.id
+}
+
+resource "google_compute_managed_ssl_certificate" "webapp_ssl_cert" {
+  name = var.webapp_ssl_certificate_name
+  managed {
+    domains = [var.webapp_domain]
+  }
+}
+
+resource "google_compute_target_https_proxy" "webapp_lb_https_proxy" {
+  name = "${var.environment}-${var.webapp_lb_name}-proxy"
+  # region           = var.region
+  url_map          = google_compute_url_map.webapp_lb_url_map.id
+  ssl_certificates = [google_compute_managed_ssl_certificate.webapp_ssl_cert.id]
+}
+
+resource "google_compute_global_forwarding_rule" "webapp_lb_forwarding_rule" {
+  name = "${var.environment}-${var.webapp_lb_name}-forwarding-rule"
+  # region = var.region
+
+  load_balancing_scheme = var.webapp_lb_forwarding_rule_load_balancing_scheme
+  ip_protocol           = var.webapp_lb_forwarding_rule_ip_protocol
+  port_range            = var.webapp_lb_forwarding_rule_port_range
+  target                = google_compute_target_https_proxy.webapp_lb_https_proxy.id
+  # network_tier          = "STANDARD"
+}
+
 data "google_dns_managed_zone" "webapp_dns_zone" {
   name = var.webapp_dns_zone_name
 }
@@ -139,7 +260,7 @@ resource "google_dns_record_set" "webapp_a_record" {
   type         = "A"
   ttl          = var.webapp_dns_record_set_ttl
   managed_zone = data.google_dns_managed_zone.webapp_dns_zone.name
-  rrdatas      = [google_compute_instance.webapp_instance.network_interface[0].access_config[0].nat_ip]
+  rrdatas      = [google_compute_global_forwarding_rule.webapp_lb_forwarding_rule.ip_address]
 }
 
 resource "google_compute_global_address" "private_ip_address" {
@@ -267,18 +388,17 @@ resource "google_cloudfunctions2_function" "verify_email_gcf" {
     available_memory   = var.verify_email_gcf_service_available_memory
     timeout_seconds    = var.verify_email_gcf_service_timeout_seconds
     environment_variables = {
-      APP_DOMAIN         = var.webapp_domain
-      APP_PORT           = var.webapp_port
-      DB_NAME            = google_sql_database.webapp_db.name
-      DB_USERNAME        = google_sql_user.db_user.name
-      DB_PASSWORD        = google_sql_user.db_user.password
-      DB_CONNECTION_NAME = google_sql_database_instance.db_instance.connection_name
-      MAILGUN_API_KEY    = var.mailgun_api_key
-      DB_HOST            = google_sql_database_instance.db_instance.private_ip_address
+      APP_DOMAIN      = var.webapp_domain
+      DB_HOST         = google_sql_database_instance.db_instance.private_ip_address
+      DB_NAME         = google_sql_database.webapp_db.name
+      DB_USERNAME     = google_sql_user.db_user.name
+      DB_PASSWORD     = google_sql_user.db_user.password
+      MAILGUN_API_KEY = var.mailgun_api_key
     }
-    ingress_settings      = var.verify_email_gcf_service_ingress_settings
-    service_account_email = google_service_account.gcf_service_account.email
-    vpc_connector         = google_vpc_access_connector.gcf_vpc_connector.id
+    ingress_settings              = var.verify_email_gcf_service_ingress_settings
+    service_account_email         = google_service_account.gcf_service_account.email
+    vpc_connector                 = google_vpc_access_connector.gcf_vpc_connector.id
+    vpc_connector_egress_settings = var.verify_email_gcf_service_vpc_egress_settings
   }
 
   event_trigger {
