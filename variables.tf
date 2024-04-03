@@ -28,14 +28,14 @@ variable "webapp_subnet_name" {
   description = "Webapp subnet name"
 }
 
-variable "db_subnet_name" {
-  type        = string
-  description = "Database subnet name"
-}
-
 variable "webapp_subnet_cidr" {
   type        = string
   description = "Webapp subnet CIDR block"
+}
+
+variable "db_subnet_name" {
+  type        = string
+  description = "Database subnet name"
 }
 
 variable "db_subnet_cidr" {
@@ -43,24 +43,44 @@ variable "db_subnet_cidr" {
   description = "Database subnet CIDR block"
 }
 
-variable "allow_http_ports" {
+# variable "webapp_lb_subnet_name" {
+#   type        = string
+#   description = "Webapp load balancer subnet name"
+# }
+
+# variable "webapp_lb_subnet_cidr" {
+#   type        = string
+#   description = "Webapp load balancer subnet CIDR block"
+# }
+
+variable "allow_health_check_ports" {
   type        = list(string)
-  description = "List of allowed ports for incoming http traffic"
+  description = "List of allowed ports for incoming https traffic"
 }
 
-variable "allow_http_source_ranges" {
+variable "allow_health_check_source_ranges" {
   type        = list(string)
-  description = "List of source ip ranges for incoming http traffic"
+  description = "List of source ip ranges for incoming https traffic"
 }
 
-variable "allow_http_target_tags" {
+variable "allow_health_check_target_tags" {
   type        = list(string)
   description = "List of network tags of target instance"
 }
 
-variable "allow_http_disabled" {
-  type        = bool
-  description = "Disable allow http firewall rule"
+variable "deny_internet_ports" {
+  type        = list(string)
+  description = "List of denied ports for incoming internet traffic"
+}
+
+variable "deny_internet_source_ranges" {
+  type        = list(string)
+  description = "List of source ip ranges for incoming internet traffic"
+}
+
+variable "deny_internet_target_tags" {
+  type        = list(string)
+  description = "List of network tags of target instance"
 }
 
 variable "deny_ssh_ports" {
@@ -78,14 +98,14 @@ variable "deny_ssh_target_tags" {
   description = "List of network tags of target instance"
 }
 
-variable "deny_ssh_disabled" {
-  type        = bool
-  description = "Disable deny ssh firewall rule"
-}
-
 variable "webapp_instance_name" {
   type        = string
   description = "Name for the webapp instance"
+}
+
+variable "webapp_instance_description" {
+  type        = string
+  description = "Description for the webapp instance "
 }
 
 variable "webapp_instance_machine_type" {
@@ -338,7 +358,173 @@ variable "verify_email_gcf_event_retry_policy" {
   description = "Event trigger retry policy of the verify email cloud function"
 }
 
+variable "verify_email_gcf_service_vpc_egress_settings" {
+  type        = string
+  description = "VPC access connector egress setting for the verify email cloud function"
+}
+
 variable "verify_email_gcf_source_storage_object_name" {
   type        = string
   description = "Storage object name of the verify email cloud function source"
 }
+
+variable "webapp_http_health_check_name" {
+  type        = string
+  description = "Name of the http health check for the webapp instance"
+}
+
+variable "webapp_http_health_check_description" {
+  type        = string
+  description = "Description of the http health check for the webapp instance"
+}
+
+variable "webapp_http_health_check_interval_sec" {
+  type        = number
+  description = "Interval in seconds to send a health check request to the webapp instance"
+}
+
+variable "webapp_http_health_check_timeout_sec" {
+  type        = number
+  description = "Timeout in seconds to consider a health check response failure from the webapp instance"
+}
+
+variable "webapp_http_health_check_healthy_threshold" {
+  type        = number
+  description = "Number of consecutive successful requests to consider webapp instance healthy"
+}
+
+variable "webapp_http_health_check_unhealthy_threshold" {
+  type        = number
+  description = "Number of consecutive failed requests to consider webapp instance unhealthy"
+}
+
+variable "webapp_http_health_check_port" {
+  type        = string
+  description = "Port of the health check endpoint of the webapp instance"
+}
+
+variable "webapp_http_health_check_request_path" {
+  type        = string
+  description = "Request path of the health check endpoint of the webapp instance"
+}
+
+variable "webapp_instance_template_description" {
+  type        = string
+  description = "Description of the webapp instance template"
+}
+
+variable "webapp_mig_distribution_policy_zones" {
+  type        = list(string)
+  description = "List of allowed zones for the webapp instance group"
+}
+
+variable "webapp_mig_distribution_policy_target_shape" {
+  type        = string
+  description = "Distribution strategy of the webapp instance group"
+}
+
+variable "webapp_mig_named_port_name" {
+  type        = string
+  description = "Name of the named port of the webapp instance group"
+}
+
+variable "webapp_mig_autohealing_initial_delay_sec" {
+  type        = number
+  description = "The number of seconds that the webapp mig waits before it applies autohealing policies"
+}
+
+variable "webapp_mig_autoscaler_name" {
+  type        = string
+  description = "Name for the autoscaler of the webapp instance MIG"
+}
+
+variable "webapp_mig_autoscaler_min_replicas" {
+  type        = number
+  description = "Minimum number of replicas that the webapp autoscaler can scale down to"
+}
+
+variable "webapp_mig_autoscaler_max_replicas" {
+  type        = number
+  description = "Maximum number of replicas that the webapp autoscaler can scale up to"
+}
+
+variable "webapp_mig_autoscaler_cooldown_period" {
+  type        = number
+  description = "The number of seconds that the autoscaler should wait before it starts collecting information from a new webapp instance"
+}
+
+variable "webapp_mig_autoscaler_cpu_utilization_target" {
+  type        = number
+  description = "The target CPU utilization that the autoscaler should maintain for webapp instance group"
+}
+
+variable "webapp_lb_name" {
+  type        = string
+  description = "Name of the load balancer for webapp"
+}
+
+variable "webapp_lb_backend_service_load_balancing_scheme" {
+  type        = string
+  description = "Load balancing scheme of the webapp lb"
+}
+
+variable "webapp_lb_backend_service_locality_lb_policy" {
+  type        = string
+  description = "The load balancing algorithm used within the scope of the locality of the webapp lb"
+}
+
+variable "webapp_lb_backend_service_protocol" {
+  type        = string
+  description = "The protocol this used to communicate with webapp instance"
+}
+
+variable "webapp_lb_backend_service_port_name" {
+  type        = string
+  description = "Name of backend port of the webapp instance"
+}
+
+variable "webapp_lb_backend_service_session_affinity" {
+  type        = string
+  description = "Type of session affinity to use for the webapp lb"
+}
+
+variable "webapp_lb_backend_service_timeout_sec" {
+  type        = number
+  description = "How many seconds to wait for the webapp before considering it a failed request"
+}
+
+variable "webapp_lb_backend_service_balancing_mode" {
+  type        = string
+  description = "The balancing mode for the backend service of webapp lb"
+}
+
+variable "webapp_lb_backend_service_max_utilization" {
+  type        = number
+  description = "Maximum CPU utilization target for the backend service of webapp lb"
+}
+
+variable "webapp_lb_backend_service_capacity_scaler" {
+  type        = number
+  description = "A multiplier applied to the group's maximum servicing capacity of the webapp lb"
+}
+
+variable "webapp_lb_forwarding_rule_load_balancing_scheme" {
+  type        = string
+  description = "Load balancing scheme of the forwarding rule of webapp lb"
+}
+
+variable "webapp_lb_forwarding_rule_ip_protocol" {
+  type        = string
+  description = "IP protocol of the forwarding rule of webapp lb"
+}
+
+variable "webapp_lb_forwarding_rule_port_range" {
+  type        = string
+  description = "Port range of the forwarding rule of webapp lb"
+}
+
+variable "webapp_ssl_certificate_name" {
+  type        = string
+  description = "Name of the webapp google-managed ssl certificate"
+}
+
