@@ -56,7 +56,7 @@ resource "google_compute_firewall" "deny_internet_access_rule" {
   network  = google_compute_network.vpc_network.id
   priority = 2000
 
-  allow {
+  deny {
     protocol = "tcp"
     ports    = var.deny_internet_ports
   }
