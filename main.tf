@@ -24,13 +24,6 @@ resource "google_compute_subnetwork" "db_subnet" {
   ip_cidr_range = var.db_subnet_cidr
 }
 
-# resource "google_compute_subnetwork" "webapp_lb_subnet" {
-#   name          = var.webapp_lb_subnet_name
-#   region        = var.region
-#   network       = google_compute_network.vpc_network.id
-#   ip_cidr_range = var.webapp_lb_subnet_cidr
-# }
-
 resource "google_compute_route" "internet_route" {
   name             = "${var.environment}-internet-route"
   network          = google_compute_network.vpc_network.id
@@ -96,6 +89,9 @@ resource "google_compute_region_instance_template" "webapp_instance" {
     source_image = data.google_compute_image.webapp_image.self_link
     disk_size_gb = var.webapp_instance_disk_size
     disk_type    = var.webapp_instance_disk_type
+    disk_encryption_key {
+      kms_key_self_link = google_kms_crypto_key.instance_crypto_key.id
+    }
   }
 
   network_interface {
@@ -126,7 +122,8 @@ resource "google_compute_region_instance_template" "webapp_instance" {
 
   depends_on = [
     google_service_account.webapp_vm_service_account,
-    google_project_iam_binding.webapp_vm_iam_bindings
+    google_project_iam_binding.webapp_vm_iam_bindings,
+    google_kms_crypto_key_iam_binding.instance_crypto_key_iam
   ]
 }
 
@@ -279,9 +276,8 @@ resource "google_sql_database_instance" "db_instance" {
   name                = "${var.environment}-db-instance-${random_id.db_name_suffix.hex}"
   region              = var.region
   database_version    = var.db_instance_database_version
+  encryption_key_name = google_kms_crypto_key.cloudsql_crypto_key.id
   deletion_protection = var.db_instance_deletion_protection
-
-  depends_on = [google_service_networking_connection.private_vpc_connection]
 
   settings {
     tier              = var.db_instance_tier
@@ -294,6 +290,11 @@ resource "google_sql_database_instance" "db_instance" {
       private_network = google_compute_network.vpc_network.id
     }
   }
+
+  depends_on = [
+    google_service_networking_connection.private_vpc_connection,
+    google_kms_crypto_key_iam_binding.cloudsql_crypto_key_iam
+  ]
 }
 
 resource "google_sql_database" "webapp_db" {
@@ -342,8 +343,21 @@ resource "random_id" "bucket_prefix" {
 
 resource "google_storage_bucket" "gcf_bucket" {
   name                        = "${var.environment}-${random_id.bucket_prefix.hex}-gcf-source"
-  location                    = "US"
+  location                    = var.region
   uniform_bucket_level_access = true
+  encryption {
+    default_kms_key_name = google_kms_crypto_key.storage_crypto_key.id
+  }
+
+  depends_on = [
+    google_kms_crypto_key_iam_binding.storage_crypto_key_iam
+  ]
+}
+
+resource "google_storage_bucket_object" "verify_email_gcf_object" {
+  name   = var.verify_email_gcf_source_storage_object_name
+  bucket = google_storage_bucket.gcf_bucket.name
+  source = "${path.root}/${var.verify_email_gcf_source_storage_object_name}"
 }
 
 resource "google_vpc_access_connector" "gcf_vpc_connector" {
@@ -352,12 +366,6 @@ resource "google_vpc_access_connector" "gcf_vpc_connector" {
   region        = var.region
   network       = google_compute_network.vpc_network.id
   ip_cidr_range = var.gcf_vpc_connector_cidr_range
-}
-
-resource "google_storage_bucket_object" "verify_email_gcf_object" {
-  name   = var.verify_email_gcf_source_storage_object_name
-  bucket = google_storage_bucket.gcf_bucket.name
-  source = "${path.root}/${var.verify_email_gcf_source_storage_object_name}"
 }
 
 resource "google_cloudfunctions2_function" "verify_email_gcf" {
@@ -431,11 +439,87 @@ resource "google_cloudfunctions2_function_iam_member" "gcf_service_account_cloud
   depends_on = [google_service_account.gcf_service_account]
 }
 
-resource "google_project_iam_binding" "pubsub_service_account_token_creator" {
+resource "google_project_iam_binding" "gcp_pubsub_service_account_token_creator" {
   project = var.project_id
   role    = var.pubsub_service_account_token_creator_role
 
   members = [
     "serviceAccount:service-${data.google_project.current_project.number}@gcp-sa-pubsub.iam.gserviceaccount.com",
+  ]
+}
+
+resource "random_id" "key_ring_name_suffix" {
+  byte_length = 4
+}
+
+resource "google_kms_key_ring" "key_ring" {
+  name     = "${var.environment}-key-ring-${random_id.key_ring_name_suffix.hex}"
+  location = var.region
+}
+
+resource "google_kms_crypto_key" "instance_crypto_key" {
+  name            = var.instance_kms_crypto_key_name
+  key_ring        = google_kms_key_ring.key_ring.id
+  rotation_period = var.kms_crypto_key_rotation_period
+
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+
+resource "google_kms_crypto_key" "cloudsql_crypto_key" {
+  name            = var.cloudsql_kms_crypto_key_name
+  key_ring        = google_kms_key_ring.key_ring.id
+  rotation_period = var.kms_crypto_key_rotation_period
+
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+
+resource "google_kms_crypto_key" "storage_crypto_key" {
+  name            = var.storage_kms_crypto_key_name
+  key_ring        = google_kms_key_ring.key_ring.id
+  rotation_period = var.kms_crypto_key_rotation_period
+
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+
+
+resource "google_kms_crypto_key_iam_binding" "instance_crypto_key_iam" {
+  crypto_key_id = google_kms_crypto_key.instance_crypto_key.id
+  role          = var.kms_crypto_key_iam_binding_role
+
+  members = [
+    "serviceAccount:service-${data.google_project.current_project.number}@compute-system.iam.gserviceaccount.com",
+  ]
+}
+
+resource "google_project_service_identity" "gcp_cloudsql_service_account" {
+  provider = google-beta
+  project  = var.project_id
+  service  = var.gcp_cloudsql_service_identity_service
+}
+
+resource "google_kms_crypto_key_iam_binding" "cloudsql_crypto_key_iam" {
+  crypto_key_id = google_kms_crypto_key.cloudsql_crypto_key.id
+  role          = var.kms_crypto_key_iam_binding_role
+
+  members = [
+    "serviceAccount:${google_project_service_identity.gcp_cloudsql_service_account.email}"
+  ]
+}
+
+data "google_storage_project_service_account" "gcp_storage_service_account" {
+}
+
+resource "google_kms_crypto_key_iam_binding" "storage_crypto_key_iam" {
+  crypto_key_id = google_kms_crypto_key.storage_crypto_key.id
+  role          = var.kms_crypto_key_iam_binding_role
+
+  members = [
+    "serviceAccount:${data.google_storage_project_service_account.gcp_storage_service_account.email_address}"
   ]
 }

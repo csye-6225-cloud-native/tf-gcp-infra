@@ -528,3 +528,26 @@ variable "webapp_ssl_certificate_name" {
   description = "Name of the webapp google-managed ssl certificate"
 }
 
+variable "kms_crypto_key_rotation_period" {
+  type        = string
+}
+
+variable "kms_crypto_key_iam_binding_role" {
+  type        = string
+}
+
+variable "instance_kms_crypto_key_name" {
+  type        = string
+}
+
+variable "cloudsql_kms_crypto_key_name" {
+  type        = string
+}
+
+variable "storage_kms_crypto_key_name" {
+  type        = string
+}
+
+variable "gcp_cloudsql_service_identity_service" {
+  type        = string
+}
